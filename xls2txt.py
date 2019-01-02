@@ -48,7 +48,24 @@ vec = CountVectorizer(
 #print(sentences1)
 x, y = zip(*sentences1)#zip(*)为解压元祖
 #test_size为x_test, y_test的数量，如果为小数比如0.2，则为比例
-x_train, x_test, y_train, y_test = train_test_split(x, y,test_size=10000,random_state=0) 
+x_train, x_test, y_train, y_test = train_test_split(x, y,test_size=16888,random_state=0) 
+print(y_test)
+for i in range(len(y_train)):
+    if y_train[i] =='A':
+        y_train[i]=0
+    elif y_train[i] =='B':
+        y_train[i]=1
+    elif y_train[i] =='C':
+        y_train[i]=2
+for i in range(len(y_test)):
+    if y_test[i] =='A':
+        y_test[i]=0
+    elif y_test[i] =='B':
+        y_test[i]=1
+    elif y_test[i] =='C':
+        y_test[i]=2   
+print(y_test)
+
 #把训练数据转换为词袋模型
 vec.fit(x_train)
 '''
@@ -65,9 +82,19 @@ svm = SVC(kernel='linear')
 svm.fit(vec.transform(x_train), y_train)
 print(svm.score(vec.transform(x_test), y_test))
 '''
+
+#使用xgboost训练迭代，准确率0.8865（0.2测试集）
 import xgboost as xgb  
 from sklearn.model_selection import StratifiedKFold  
-import numpy as np
 # xgb矩阵赋值  
 xgb_train = xgb.DMatrix(vec.transform(x_train), label=y_train)  
 xgb_test = xgb.DMatrix(vec.transform(x_test)) 
+
+dtrain = xgb.DMatrix(vec.transform(x_train), label=y_train)
+dtest = xgb.DMatrix(vec.transform(x_test),label=y_test)  # label可以不要，此处需要是为了测试效果
+param = {'max_depth':6, 'eta':0.5, 'eval_metric':'merror', 'silent':1, 'objective':'multi:softmax', 'num_class':3}  # 参数
+evallist  = [(dtrain,'train'), (dtest,'test')]  # 这步可以不要，用于测试效果
+num_round = 500  # 循环次数
+bst = xgb.train(param, dtrain, num_round, evallist)
+preds = bst.predict(dtest)
+
